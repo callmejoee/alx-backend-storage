@@ -34,6 +34,21 @@ def call_history(method: Callable) -> Callable:
         return output
     return wrapper
 
+def replay(method: Callable):
+    """Display the history of calls of a particular function."""
+    redis_client = method.__self__._redis
+    method_name = method.__qualname__
+    
+    inputs_key = f"{method_name}:inputs"
+    outputs_key = f"{method_name}:outputs"
+
+    inputs = redis_client.lrange(inputs_key, 0, -1)
+    outputs = redis_client.lrange(outputs_key, 0, -1)
+    
+    print(f"{method_name} was called {len(inputs)} times:")
+    for input_, output in zip(inputs, outputs):
+        print(f"{method_name}(*{input_.decode('utf-8')}) -> {output.decode('utf-8')}")
+
 class Cache:
     def __init__(self):
         """Initialize the Redis client and flush the database."""
@@ -62,7 +77,5 @@ class Cache:
         return self.get(key, fn=lambda d: d.decode("utf-8"))
 
     def get_int(self, key: str) -> Optional[int]:
-        """Retrieve the data as an integer."""
-        return self.get(key, fn=int)
         """Retrieve the data as an integer."""
         return self.get(key, fn=int)
